@@ -1,6 +1,23 @@
 # tianquan-shoubing-web
 
-Stellar Enclosure frontend. All first-party modules start at **0.0.1**.
+React console for Shoubing identity, tenant, OAuth client and resource-token administration. All first-party modules start at **0.0.1**.
+
+## Pages and capabilities
+
+| Route | Function |
+|---|---|
+| `/overview` | Identity/security administration overview. |
+| `/users` | Manage identity users, reset passwords and revoke user tokens. |
+| `/tenants` | Manage tenants and their memberships. |
+| `/clients` | Manage OAuth clients, redirect/resource URIs and client credentials. |
+| `/clients/:clientId/resource-grants` | Maintain the client's grants to resource servers. |
+| `/resource-servers` | Manage resource-server definitions and enabled state. |
+| `/keys` | Publish, activate and retire signing keys. |
+| `/audits` | Inspect identity administration audit records. |
+
+See [routes](src/app/router.tsx) and [feature modules](src/features/). Authentication uses Edge registration `edge-shoubing`, BFF sessions and `/api/v1/tianquan-shoubing/auth/bootstrap`; the backend is [tianquan-shoubing-service](https://github.com/Stellar-Enclosure/tianquan-shoubing-service). The `/login` page redirects to centralized login rather than collecting a password inside the SPA.
+
+The console manages identity/OAuth resources; RBAC role graphs, constraints and active-role governance are owned by [tianquan-jianshen-web](https://github.com/Stellar-Enclosure/tianquan-jianshen-web). Tokens and signing keys remain server responsibilities. The application supports standalone/portal embedding with `VITE_BASE_PATH`; a frontend build does not verify real consent, token revocation or key rotation.
 
 ## Build and test
 
