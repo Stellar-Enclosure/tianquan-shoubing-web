@@ -1,3 +1,5 @@
+import {useWritableFields} from '../../permissions/FieldCatalog'
+import {useResourcePermission} from '../../permissions/useResourcePermission'
 import {
     Button,
     Card,
@@ -16,8 +18,8 @@ import {
 import {EditOutlined, PlusOutlined, ReloadOutlined, TeamOutlined} from '@ant-design/icons'
 import {useState} from 'react'
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
-import {httpClient, useAuth} from '../../auth/AuthContext'
-import {PageState, usePermission} from '@stellar-enclosure/stellar-enclosure-web-shared'
+import {httpClient} from '../../auth/AuthContext'
+import {PageState} from '@stellar-enclosure/stellar-enclosure-web-shared'
 import type {
     CreateTenantDTO,
     TenantMembershipPageVO,
@@ -51,9 +53,12 @@ const parseSettings = (value: unknown): Record<string, unknown> => {
 }
 
 export const TenantListPage = () => {
-    const auth = useAuth()
+  const createWritable = useWritableFields('CreateTenantDTO')
+  const updateWritable = useWritableFields('UpdateTenantDTO')
+  const memberWritable = useWritableFields('UpsertTenantMembershipDTO')
+
     const queryClient = useQueryClient()
-    const {has} = usePermission(auth.bootstrap?.permissions ?? [])
+    const {has} = useResourcePermission()
     const [createOpen, setCreateOpen] = useState(false)
     const [detailTenant, setDetailTenant] = useState<TenantVO | null>(null)
     const [editOpen, setEditOpen] = useState(false)
@@ -218,7 +223,7 @@ export const TenantListPage = () => {
                 extra={
                     <Space>
                         <Button icon={<ReloadOutlined/>} onClick={() => {void tenantsQuery.refetch()}}>刷新</Button>
-                        {has('tianquan-shoubing:tenant:manage') && (
+                        {has('tianquan-shoubing.button.TenantListPage.manage1') && (
                             <Button type="primary" icon={<PlusOutlined/>} onClick={() => {
                                 createForm.resetFields()
                                 setCreateOpen(true)
@@ -268,7 +273,7 @@ export const TenantListPage = () => {
                 extra={detailTenant && (
                     <Space>
                         <Button icon={<TeamOutlined/>} onClick={openMembers}>成员</Button>
-                        {has('tianquan-shoubing:tenant:manage') && detailTenant.status !== 'CLOSED' && (
+                        {has('tianquan-shoubing.button.TenantListPage.manage2') && detailTenant.status !== 'CLOSED' && (
                             <Button type="primary" icon={<EditOutlined/>} onClick={openEdit}>编辑</Button>
                         )}
                     </Space>
@@ -297,7 +302,7 @@ export const TenantListPage = () => {
                 open={memberOpen}
                 width={640}
                 onClose={() => setMemberOpen(false)}
-                extra={has('tianquan-shoubing:tenant:manage') && detailTenant?.status !== 'CLOSED' && (
+                extra={has('tianquan-shoubing.button.TenantListPage.manage3') && detailTenant?.status !== 'CLOSED' && (
                     <Button icon={<PlusOutlined/>} onClick={() => openMemberEdit()}>新增/更新成员</Button>
                 )}
             >
@@ -323,7 +328,7 @@ export const TenantListPage = () => {
                             },
                             {title: '版本', dataIndex: 'version'},
                             {title: '更新时间', dataIndex: 'updatedAt'},
-                            ...(has('tianquan-shoubing:tenant:manage') && detailTenant?.status !== 'CLOSED' ? [{
+                            ...(has('tianquan-shoubing.button.TenantListPage.manage4') && detailTenant?.status !== 'CLOSED' ? [{
                                 title: '操作',
                                 render: (_value: unknown, row: TenantMembershipVO) => (
                                     <Button size="small" onClick={() => openMemberEdit(row)}>编辑</Button>
@@ -334,7 +339,7 @@ export const TenantListPage = () => {
                 </PageState>
             </Drawer>
 
-            <Modal
+            <Modal okButtonProps={{disabled: !createWritable}}
                 title="创建 Tianquan-Shoubing 租户"
                 open={createOpen}
                 confirmLoading={createMutation.isPending}
@@ -342,7 +347,7 @@ export const TenantListPage = () => {
                 onOk={() => {void submitCreate()}}
                 destroyOnHidden
             >
-                <Form form={createForm} layout="vertical" preserve={false}>
+                <Form disabled={!createWritable} form={createForm} layout="vertical" preserve={false}>
                     <Form.Item name="tenantCode" label="租户编码" rules={[{required: true, pattern: /^[a-z][a-z0-9-]{2,63}$/}]}>
                         <Input placeholder="acme" autoComplete="off"/>
                     </Form.Item>
@@ -355,7 +360,7 @@ export const TenantListPage = () => {
                 </Form>
             </Modal>
 
-            <Modal
+            <Modal okButtonProps={{disabled: !updateWritable}}
                 title={`编辑租户：${detailTenant?.tenantName ?? ''}`}
                 open={editOpen}
                 confirmLoading={updateMutation.isPending}
@@ -363,7 +368,7 @@ export const TenantListPage = () => {
                 onOk={() => {void submitUpdate()}}
                 destroyOnHidden
             >
-                <Form form={editForm} layout="vertical" preserve={false} initialValues={{
+                <Form disabled={!updateWritable} form={editForm} layout="vertical" preserve={false} initialValues={{
                     tenantName: detailTenant?.tenantName,
                     status: detailTenant?.status,
                     settings: JSON.stringify(detailTenant?.settings ?? {}, null, 2),
@@ -385,7 +390,7 @@ export const TenantListPage = () => {
                 </Form>
             </Modal>
 
-            <Modal
+            <Modal okButtonProps={{disabled: !memberWritable}}
                 title={`${memberEdit ? '编辑' : '新增'}租户成员`}
                 open={memberFormOpen}
                 confirmLoading={memberMutation.isPending}
@@ -397,7 +402,7 @@ export const TenantListPage = () => {
                 onOk={() => {void submitMember()}}
                 destroyOnHidden
             >
-                <Form form={memberForm} layout="vertical" preserve={false} initialValues={{
+                <Form disabled={!memberWritable} form={memberForm} layout="vertical" preserve={false} initialValues={{
                     identitySub: memberEdit?.identitySub ?? '',
                     status: memberEdit?.status ?? 'ACTIVE',
                     expectedVersion: memberEdit?.version,

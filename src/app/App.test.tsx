@@ -1,3 +1,5 @@
+vi.mock('../permissions/FieldCatalog', () => ({FieldCatalogProvider: ({children}: {children: ReactNode}) => children, useWritableFields: () => true}))
+import {authorizationFixture} from '../test/permissionFixtures'
 import {cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
 import type {ReactNode} from 'react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -25,13 +27,7 @@ vi.mock('../auth/AuthContext', () => ({
   AuthProvider: ({ children }: { children: ReactNode }) => children,
   useAuth: () => ({
     loading: false,
-    bootstrap: {
-        user: {id: 'user-1', identitySub: 'alice-sub', tenantId: '1001', status: 'ACTIVE'},
-        activeRoleContexts: [],
-      permissions: admin.permissions,
-        apps: [], menus: [], routes: [], actions: [], fieldPolicies: {},
-        defaultApplicationCode: null, defaultRoute: null, authVersion: 1, policyVersion: 1,
-    },
+    bootstrap: authorizationFixture(admin.permissions, {tenantId: '1001', subject: 'alice-sub'}),
   }),
   httpClient: { request: admin.request },
 }))

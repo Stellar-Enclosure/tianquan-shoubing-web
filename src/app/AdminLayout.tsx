@@ -1,3 +1,4 @@
+import {useResourcePermission} from '../permissions/useResourcePermission'
 import {Breadcrumb, Tag} from 'antd'
 import type {ItemType} from 'antd/es/breadcrumb/Breadcrumb'
 import {HomeOutlined, LogoutOutlined} from '@ant-design/icons'
@@ -5,7 +6,6 @@ import {
     EnterpriseLayout,
     type EnterpriseLayoutConfig,
     type EnterpriseNavigationItem,
-    usePermission,
 } from '@stellar-enclosure/stellar-enclosure-web-shared'
 import {type PropsWithChildren, useMemo} from 'react'
 import {useLocation, useNavigate} from 'react-router-dom'
@@ -21,20 +21,20 @@ interface NavItem {
     children?: readonly NavItem[]
 }
 
-// 平台自己的导航树；按 bootstrap 权限递归剪枝后交给 shared 左侧树。
+// 导航只消费当前版本快照与静态资源声明。
 const ALL_NAV_ITEMS: NavItem[] = [
-    {key: 'overview', label: '身份概览', path: '/overview', permission: ''},
-    {key: 'identity', label: '身份目录', permission: '', children: [
-        {key: 'users', label: '全局用户', path: '/users', permission: 'tianquan-shoubing:identity-user:read'},
-        {key: 'tenants', label: '租户目录', path: '/tenants', permission: 'tianquan-shoubing:tenant:read'},
+    {key: 'overview', label: '身份概览', path: '/overview', permission: 'tianquan-shoubing.menu.overview'},
+    {key: 'identity', label: '身份目录', permission: 'tianquan-shoubing.menu.identity', children: [
+        {key: 'users', label: '全局用户', path: '/users', permission: 'tianquan-shoubing.menu.users'},
+        {key: 'tenants', label: '租户目录', path: '/tenants', permission: 'tianquan-shoubing.menu.tenants'},
     ]},
-    {key: 'oauth', label: 'OAuth 与资源', permission: '', children: [
-        {key: 'clients', label: 'OAuth 客户端', path: '/clients', activePathPrefixes: ['/clients'], permission: 'tianquan-shoubing:oauth-client:read'},
-        {key: 'resource-servers', label: 'Resource Server', path: '/resource-servers', permission: 'tianquan-shoubing:resource-server:read'},
+    {key: 'oauth', label: 'OAuth 与资源', permission: 'tianquan-shoubing.menu.oauth', children: [
+        {key: 'clients', label: 'OAuth 客户端', path: '/clients', activePathPrefixes: ['/clients'], permission: 'tianquan-shoubing.menu.clients'},
+        {key: 'resource-servers', label: 'Resource Server', path: '/resource-servers', permission: 'tianquan-shoubing.menu.resource-servers'},
     ]},
-    {key: 'security', label: '安全治理', permission: '', children: [
-        {key: 'keys', label: '签名密钥', path: '/keys', permission: 'tianquan-shoubing:signing-key:read'},
-        {key: 'audits', label: '安全审计', path: '/audits', permission: 'tianquan-shoubing:audit:read'},
+    {key: 'security', label: '安全治理', permission: 'tianquan-shoubing.menu.security', children: [
+        {key: 'keys', label: '签名密钥', path: '/keys', permission: 'tianquan-shoubing.menu.keys'},
+        {key: 'audits', label: '安全审计', path: '/audits', permission: 'tianquan-shoubing.menu.audits'},
     ]},
 ]
 
@@ -52,7 +52,7 @@ export const AdminLayout = ({ children, embedded = false }: PropsWithChildren<{ 
     const auth = useAuth()
     const navigate = useNavigate()
     const location = useLocation()
-    const { has } = usePermission(auth.bootstrap?.permissions ?? [])
+    const { has } = useResourcePermission()
 
     const navigation: EnterpriseNavigationItem[] = useMemo(
         () => filterNavigation(ALL_NAV_ITEMS, has),
@@ -115,7 +115,7 @@ const filterNavigation = (
     has: (permission: string) => boolean,
 ): EnterpriseNavigationItem[] => items.flatMap((item): EnterpriseNavigationItem[] => {
     const children = item.children ? filterNavigation(item.children, has) : []
-    const allowed = !item.permission || has(item.permission)
+    const allowed = has(item.permission)
     if (item.children) {
         return children.length > 0 ? [{key: item.key, label: item.label, children}] : []
     }

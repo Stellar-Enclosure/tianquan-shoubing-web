@@ -1,82 +1,105 @@
-import {createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState,} from 'react'
-import {createGatewayAuthClient, createHttpClient,} from '@stellar-enclosure/stellar-enclosure-web-shared'
-import type {AuthorizationBootstrap} from '../api/types'
-
-const gatewayOrigin = import.meta.env.VITE_YUHENG_ORIGIN ?? ''
-
-const gatewayAuth = createGatewayAuthClient({
-  registrationId: import.meta.env.VITE_OAUTH_REGISTRATION_ID ?? 'edge-shoubing',baseUrl: gatewayOrigin})
-const httpClient = createHttpClient({
-    baseUrl: gatewayOrigin,
-  credentials: 'include',
-    onAuthError: () => undefined,
-})
+import {createContext, type PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState} from 'react'
+import type {GatewayIdentityResult} from '@stellar-enclosure/stellar-enclosure-web-shared'
+import {isPermissionSnapshot, snapshotContext, type PermissionSnapshot, type PermissionSnapshotContext} from '@stellar-enclosure/stellar-enclosure-web-shared/permissions'
+import {gatewayAuth, httpClient, subscribeAuthorizationFailure} from './authTransport'
 
 export {gatewayAuth, httpClient}
-
-interface AuthContextValue {
-  readonly loading: boolean
-  readonly bootstrap?: AuthorizationBootstrap
-  readonly error?: string
-  readonly login: () => void
-  readonly logout: () => Promise<void>
+export interface IdentityAuthorization {
+  readonly identity: GatewayIdentityResult
+  readonly snapshot: PermissionSnapshot
+  readonly binding: PermissionSnapshotContext
+  readonly user: {readonly id: string; readonly tenantId: string; readonly identitySub: string}
 }
+type AuthState = {
+  loading: boolean
+  bootstrap?: IdentityAuthorization
+  error?: string
+  login: () => void
+  logout: () => Promise<void>
+  refreshAuthorization: () => Promise<void>
+}
+const AuthContext = createContext<AuthState | undefined>(undefined)
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined)
-
-export const AuthProvider = ({ children }: PropsWithChildren) => {
+export const AuthProvider = ({children}: PropsWithChildren) => {
+  const authClient = gatewayAuth
   const [loading, setLoading] = useState(true)
-  const [bootstrap, setBootstrap] = useState<AuthorizationBootstrap>()
+  const [authorization, setAuthorization] = useState<IdentityAuthorization>()
   const [error, setError] = useState<string>()
-
-  const login = useCallback(() => {
-    setError(undefined)
+  const generation = useRef(0)
+  const pending = useRef<AbortController | null>(null)
+  const clearAuthorization = useCallback(() => {
+    generation.current += 1
+    pending.current?.abort()
+    setAuthorization(undefined)
+    setLoading(false)
+    return generation.current
+  }, [])
+  const refreshAuthorization = useCallback(async () => {
+    const serial = clearAuthorization()
+    const controller = new AbortController()
+    pending.current = controller
     setLoading(true)
+    setError(undefined)
     try {
-      gatewayAuth.login()
+      const identity = await authClient.identity(controller.signal)
+      if (serial !== generation.current) return
+      const capture = authClient.context.capture(controller.signal)
+      const envelope = await httpClient.request<unknown>('/api/v1/authorization/effective-permissions', {signal: capture.signal})
+      capture.assertCurrent()
+      const snapshot = typeof envelope === 'object' && envelope !== null && 'success' in envelope
+        ? (envelope as {success: unknown; data?: unknown}).success === true ? (envelope as {data?: unknown}).data : null : envelope
+      if (!isPermissionSnapshot(snapshot) || snapshot.issuer !== identity.issuer || snapshot.subject !== identity.subject
+        || snapshot.catalogScope.tenantId !== identity.tenantId || snapshot.catalogScope.businessCode !== 'xingyuan'
+        || snapshot.catalogScope.applicationCode !== 'tianquan-shoubing'
+        || snapshot.catalogScope.namespaceCode !== (import.meta.env.VITE_PERMISSION_NAMESPACE ?? '')
+        || snapshot.catalogScope.environment !== (import.meta.env.VITE_PERMISSION_ENVIRONMENT ?? '')
+        || Date.parse(snapshot.snapshotExpiresAt) <= Date.now()) throw new Error('当前权限快照与应用身份或部署范围不一致')
+      if (serial !== generation.current) return
+      setAuthorization({identity, snapshot, binding: snapshotContext(snapshot, capture.epoch),
+        user: {id: identity.subject, tenantId: identity.tenantId, identitySub: identity.subject}})
     } catch (failure) {
-      setLoading(false)
-      setError(failure instanceof Error ? failure.message : '统一身份登录失败')
-    }
-  }, [])
-
+      if (serial === generation.current) {
+        setAuthorization(undefined)
+        setError(failure instanceof Error ? failure.message : '权限视图不可用')
+      }
+      throw failure
+    } finally { if (serial === generation.current) setLoading(false) }
+  }, [authClient, clearAuthorization])
+  const login = useCallback(() => {
+    clearAuthorization()
+    setLoading(true)
+    setError(undefined)
+    try { authClient.login() }
+    catch (failure) { setLoading(false); setError(failure instanceof Error ? failure.message : '登录失败') }
+  }, [authClient, clearAuthorization])
   const logout = useCallback(async () => {
+    const serial = clearAuthorization()
     try {
-      const result = await gatewayAuth.logout()
-      setBootstrap(undefined)
-      setError(result.remoteState === 'CONFIRMED'
-        ? undefined
-        : '本地已退出，远端令牌撤销待恢复')
+      const result = await authClient.logout()
+      if (serial === generation.current) setError(result.remoteState === 'CONFIRMED' ? undefined : '本地已退出，远端令牌撤销待恢复')
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : '统一身份退出失败')
+      if (serial === generation.current) setError(failure instanceof Error ? failure.message : '统一身份退出失败')
     }
-  }, [])
-
+  }, [authClient, clearAuthorization])
   useEffect(() => {
+    const unsubscribe = subscribeAuthorizationFailure(clearAuthorization)
     let active = true
-      void gatewayAuth.bootstrap<AuthorizationBootstrap>(
-          '/api/v1/tianquan-shoubing/auth/bootstrap',
-      )
-          .then((value) => {
-              if (active) setBootstrap(value)
-          })
-          .catch(() => {
-        if (active) setBootstrap(undefined)
-          })
-          .finally(() => {
-              if (active) setLoading(false)
-          })
-    return () => { active = false }
-  }, [])
-
-  const value = useMemo(
-    () => ({ loading, bootstrap, error, login, logout }),
-    [loading, bootstrap, error, login, logout],
-  )
+    queueMicrotask(() => { if (active) void refreshAuthorization().catch(() => undefined) })
+    return () => { active = false; unsubscribe(); generation.current += 1; pending.current?.abort() }
+  }, [refreshAuthorization, clearAuthorization])
+  useEffect(() => {
+    if (!authorization) return
+    const deadline = setTimeout(clearAuthorization, Math.max(1, Math.min(Date.parse(authorization.snapshot.snapshotExpiresAt) - Date.now(), 2_147_483_647)))
+    const unsubscribe = authClient.context.subscribe(() => {
+      if (authorization.binding.requestEpoch !== authClient.context.epoch) clearAuthorization()
+    })
+    return () => { clearTimeout(deadline); unsubscribe() }
+  }, [authorization, authClient, clearAuthorization])
+  const value = useMemo(() => ({loading, bootstrap: authorization, error, login, logout, refreshAuthorization}),
+    [loading, authorization, error, login, logout, refreshAuthorization])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
-
-export const useAuth = (): AuthContextValue => {
+export const useAuth = (): AuthState => {
   const value = useContext(AuthContext)
   if (!value) throw new Error('AuthProvider is required')
   return value

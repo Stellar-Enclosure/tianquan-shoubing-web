@@ -1,10 +1,12 @@
+import {useWritableFields} from '../../permissions/FieldCatalog'
+import {useResourcePermission} from '../../permissions/useResourcePermission'
 import {Button, Card, Form, Input, message, Modal, Select, Space, Table, Tag, Typography} from 'antd'
 import {CheckCircleOutlined, PlusOutlined, ReloadOutlined, StopOutlined} from '@ant-design/icons'
 import {useState} from 'react'
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import {useSearchParams} from 'react-router-dom'
 import {httpClient, useAuth} from '../../auth/AuthContext'
-import {PageState, usePermission} from '@stellar-enclosure/stellar-enclosure-web-shared'
+import {PageState} from '@stellar-enclosure/stellar-enclosure-web-shared'
 import type {SigningKeyVO} from '../../api/types'
 
 const STATUS_COLORS: Record<string, string> = {
@@ -14,14 +16,16 @@ const STATUS_COLORS: Record<string, string> = {
 }
 
 export const SigningKeyPage = () => {
+  const publishWritable = useWritableFields('PublishSigningKeyDTO')
+  const statusWritable = useWritableFields('ResourceVersionDTO')
     const auth = useAuth()
     const queryClient = useQueryClient()
-    const {has} = usePermission(auth.bootstrap?.permissions ?? [])
+    const {has} = useResourcePermission()
     const [searchParams, setSearchParams] = useSearchParams()
     const tenantRealm = auth.bootstrap?.user.tenantId
         ? `tenant:${auth.bootstrap.user.tenantId}`
         : undefined
-    const canSelectPlatform = auth.bootstrap?.permissions.includes('system:platform:admin') ?? false
+    const canSelectPlatform = has('tianquan-shoubing.button.SigningKeyPage.admin1')
     const realm = searchParams.get('realm') === 'platform' && canSelectPlatform
         ? 'platform'
         : tenantRealm
@@ -109,7 +113,7 @@ export const SigningKeyPage = () => {
                           style={{width: 240}}
                       />
                   )}
-                      {has('tianquan-shoubing:signing-key:publish') && (
+                      {has('tianquan-shoubing.button.SigningKeyPage.publish1') && (
                           <Button type="primary" icon={<PlusOutlined/>}
                                   onClick={() => setPublishOpen(true)}>预发布密钥</Button>
                       )}
@@ -152,14 +156,14 @@ export const SigningKeyPage = () => {
                               title: '操作', width: 160,
                               render: (_: unknown, row: SigningKeyVO) => (
                                   <Space size="small">
-                                      {has('tianquan-shoubing:signing-key:activate') && row.status === 'PUBLISHED' && (
+                                      {has('tianquan-shoubing.button.SigningKeyPage.activate1') && statusWritable && row.status === 'PUBLISHED' && (
                                           <Button size="small" icon={<CheckCircleOutlined/>} type="primary"
                                                   onClick={() => activateMutation.mutate({
                                                       kid: row.kid,
                                                       version: row.version
                                                   })}>激活</Button>
                                       )}
-                                      {has('tianquan-shoubing:signing-key:retire') && row.status === 'ACTIVE' && (
+                                      {has('tianquan-shoubing.button.SigningKeyPage.retire1') && statusWritable && row.status === 'ACTIVE' && (
                                           <Button size="small" icon={<StopOutlined/>} danger
                                                   onClick={() => retireMutation.mutate({
                                                       kid: row.kid,
@@ -175,7 +179,7 @@ export const SigningKeyPage = () => {
           </Card>
 
           {/* Publish Modal */}
-          <Modal
+          <Modal okButtonProps={{disabled: !publishWritable}}
               title="预发布签名密钥"
               open={publishOpen}
               width={560}
@@ -189,7 +193,7 @@ export const SigningKeyPage = () => {
               }}
               destroyOnHidden
           >
-              <Form form={form} layout="vertical" preserve={false}>
+              <Form disabled={!publishWritable} form={form} layout="vertical" preserve={false}>
                   <Form.Item name="kid" label="KID" rules={[{required: true}]}>
                       <Input placeholder="signing-key-2025"/>
                   </Form.Item>

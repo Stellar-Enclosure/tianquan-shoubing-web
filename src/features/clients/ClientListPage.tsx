@@ -1,3 +1,5 @@
+import {useWritableFields} from '../../permissions/FieldCatalog'
+import {useResourcePermission} from '../../permissions/useResourcePermission'
 import {
     Alert,
     Button,
@@ -22,7 +24,7 @@ import {useEffect, useState} from 'react'
 import {useNavigate, useSearchParams} from 'react-router-dom'
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import {httpClient, useAuth} from '../../auth/AuthContext'
-import {PageState, usePermission} from '@stellar-enclosure/stellar-enclosure-web-shared'
+import {PageState} from '@stellar-enclosure/stellar-enclosure-web-shared'
 import {normalizePage} from '../../api/page'
 import type {
     CreateOAuthClientDTO,
@@ -97,15 +99,19 @@ const validateAllowedScopes = async (_rule: unknown, value: unknown): Promise<vo
 }
 
 export const ClientListPage = () => {
+  const createWritable = useWritableFields('CreateOAuthClientDTO')
+  const updateWritable = useWritableFields('UpdateOAuthClientDTO')
+  const rotateWritable = useWritableFields('RotateClientSecretDTO')
+  const uriWritable = useWritableFields('OAuthValueDTO')
   const auth = useAuth()
   const queryClient = useQueryClient()
     const navigate = useNavigate()
-  const { has } = usePermission(auth.bootstrap?.permissions ?? [])
+  const { has } = useResourcePermission()
     const [searchParams, setSearchParams] = useSearchParams()
     const tenantRealm = auth.bootstrap?.user.tenantId
         ? `tenant:${auth.bootstrap.user.tenantId}`
         : undefined
-    const canSelectPlatform = auth.bootstrap?.permissions.includes('system:platform:admin') ?? false
+    const canSelectPlatform = has('tianquan-shoubing.button.ClientListPage.admin1')
     const requestedRealm = searchParams.get('realm')
     const realm = requestedRealm === 'platform' && canSelectPlatform
         ? 'platform'
@@ -272,7 +278,7 @@ export const ClientListPage = () => {
                   <Button icon={<ReloadOutlined/>} onClick={() => {
                       void clientsQuery.refetch()
                   }}>刷新</Button>
-                  {has('tianquan-shoubing:oauth-client:create') && (
+                  {has('tianquan-shoubing.button.ClientListPage.create1') && (
                       <Button type="primary" icon={<PlusOutlined/>}
                               onClick={() => {
                                   clearOneTimeCredentials()
@@ -386,13 +392,13 @@ export const ClientListPage = () => {
             extra={
                 detailClient && (
                     <Space>
-                        {has('tianquan-shoubing:resource-server:grant') && (
+                        {has('tianquan-shoubing.button.ClientListPage.grant1') && (
                                 <Button
                                 onClick={() => navigate(`/clients/${encodeURIComponent(detailClient.clientId)}/resource-grants?realm=${encodeURIComponent(realm ?? '')}`)}>
                                 <LinkOutlined/> Resource Grant
                             </Button>
                         )}
-                        {has('tianquan-shoubing:oauth-client:update') && (
+                        {has('tianquan-shoubing.button.ClientListPage.update1') && (
                             <Space>
                                 {detailClient.clientType === 'CONFIDENTIAL' && (
                                     <Button onClick={() => setRotateOpen(true)}>轮换 Secret</Button>
@@ -438,7 +444,7 @@ export const ClientListPage = () => {
                     <Card
                         size="small"
                         title="回调地址 (redirect_uri)"
-                        extra={has('tianquan-shoubing:oauth-client:update') && (
+                        extra={has('tianquan-shoubing.button.ClientListPage.update2') && (
                             <Button size="small" onClick={() => {
                                 setAddUriType('redirect');
                                 uriForm.resetFields()
@@ -454,7 +460,7 @@ export const ClientListPage = () => {
                                     dataSource={[...detailClient.redirectUris]}
                                     renderItem={(uri: string) => (
                                         <List.Item extra={
-                                            has('tianquan-shoubing:oauth-client:update') && (
+                                            has('tianquan-shoubing.button.ClientListPage.update3') && (
                                                 <Popconfirm title="确认删除该回调地址？"
                                                             onConfirm={() => deleteUriMutation.mutate({
                                                                 clientId: detailClient.clientId,
@@ -476,7 +482,7 @@ export const ClientListPage = () => {
                     <Card
                         size="small"
                         title="Resource URI"
-                        extra={has('tianquan-shoubing:oauth-client:update') && (
+                        extra={has('tianquan-shoubing.button.ClientListPage.update4') && (
                             <Button size="small" onClick={() => {
                                 setAddUriType('resource');
                                 uriForm.resetFields()
@@ -491,7 +497,7 @@ export const ClientListPage = () => {
                                     dataSource={[...detailClient.resourceUris]}
                                     renderItem={(uri: string) => (
                                         <List.Item extra={
-                                            has('tianquan-shoubing:oauth-client:update') && (
+                                            has('tianquan-shoubing.button.ClientListPage.update5') && (
                                                 <Popconfirm title="确认删除该 Resource URI？"
                                                             onConfirm={() => deleteUriMutation.mutate({
                                                                 clientId: detailClient.clientId,
@@ -513,7 +519,7 @@ export const ClientListPage = () => {
         </Drawer>
 
         {/* Create Modal */}
-        <Modal
+        <Modal okButtonProps={{disabled: !createWritable}}
             title="创建 OAuth 客户端"
             open={createOpen}
             width={560}
@@ -540,7 +546,7 @@ export const ClientListPage = () => {
             }}
             destroyOnHidden
         >
-            <Form form={createForm} layout="vertical" preserve={false}>
+            <Form disabled={!createWritable} form={createForm} layout="vertical" preserve={false}>
                 <Form.Item name="clientId" label="Client ID" rules={[{required: true}]}>
                     <Input placeholder="唯一标识，如 my-app"/>
                 </Form.Item>
@@ -634,7 +640,7 @@ export const ClientListPage = () => {
         )}
 
         {/* Rotate Secret Confirmation */}
-        <Modal
+        <Modal okButtonProps={{disabled: !rotateWritable}}
             title={`轮换 Secret：${detailClient?.clientId ?? ''}`}
             open={rotateOpen}
             confirmLoading={rotateMutation.isPending}
@@ -651,7 +657,7 @@ export const ClientListPage = () => {
         </Modal>
 
         {/* Edit Modal */}
-      <Modal
+      <Modal okButtonProps={{disabled: !updateWritable}}
           title={`编辑：${detailClient?.clientId ?? ''}`}
           open={editOpen}
           confirmLoading={updateMutation.isPending}
@@ -675,7 +681,7 @@ export const ClientListPage = () => {
           }}
           destroyOnHidden
       >
-          <Form form={editForm} layout="vertical" preserve={false}>
+          <Form disabled={!updateWritable} form={editForm} layout="vertical" preserve={false}>
               <Form.Item name="clientName" label="名称" rules={[{required: true}]}>
                   <Input/>
               </Form.Item>
@@ -699,7 +705,7 @@ export const ClientListPage = () => {
       </Modal>
 
         {/* Add URI Modal */}
-        <Modal
+        <Modal okButtonProps={{disabled: !uriWritable}}
             title={`添加${addUriType === 'redirect' ? '回调地址' : 'Resource URI'}`}
             open={!!addUriType}
             confirmLoading={addUriMutation.isPending}
@@ -716,7 +722,7 @@ export const ClientListPage = () => {
             }}
           destroyOnHidden
         >
-            <Form form={uriForm} layout="vertical" preserve={false}>
+            <Form disabled={!uriWritable} form={uriForm} layout="vertical" preserve={false}>
                 <Form.Item name="value" label={addUriType === 'redirect' ? '回调地址' : 'Resource URI'}
                            rules={[{required: true, type: 'url', message: '请输入有效 URL'}]}>
                     <Input placeholder="https://..."/>

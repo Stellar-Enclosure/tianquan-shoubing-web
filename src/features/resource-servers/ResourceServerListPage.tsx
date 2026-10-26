@@ -1,3 +1,5 @@
+import {useWritableFields} from '../../permissions/FieldCatalog'
+import {useResourcePermission} from '../../permissions/useResourcePermission'
 import {
     Alert,
     Button,
@@ -18,8 +20,8 @@ import {PlayCircleOutlined, PlusOutlined, ReloadOutlined, StopOutlined} from '@a
 import {useState} from 'react'
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import {useSearchParams} from 'react-router-dom'
-import {httpClient, useAuth} from '../../auth/AuthContext'
-import {PageState, usePermission} from '@stellar-enclosure/stellar-enclosure-web-shared'
+import {httpClient} from '../../auth/AuthContext'
+import {PageState} from '@stellar-enclosure/stellar-enclosure-web-shared'
 import {normalizePage} from '../../api/page'
 import type {
     BatchResourceServerActionDTO,
@@ -70,9 +72,12 @@ const toResourceServerSearchParams = ({page, size, query, status}: IdentityListF
 }
 
 export const ResourceServerListPage = () => {
-    const auth = useAuth()
+  const createWritable = useWritableFields('CreateResourceServerDTO')
+  const statusWritable = useWritableFields('ResourceVersionDTO')
+  const batchWritable = useWritableFields('BatchResourceServerActionDTO')
+
     const queryClient = useQueryClient()
-    const {has} = usePermission(auth.bootstrap?.permissions ?? [])
+    const {has} = useResourcePermission()
     const [searchParams, setSearchParams] = useSearchParams()
     const [createOpen, setCreateOpen] = useState(false)
     const [detailRs, setDetailRs] = useState<ResourceServerVO | null>(null)
@@ -181,7 +186,7 @@ export const ResourceServerListPage = () => {
                 extra={
                     <Space>
                         <Button icon={<ReloadOutlined/>} onClick={() => {void rsQuery.refetch()}}>刷新</Button>
-                        {has('tianquan-shoubing:resource-server:create') && (
+                        {has('tianquan-shoubing.button.ResourceServerListPage.create1') && (
                             <Button type="primary" icon={<PlusOutlined/>} onClick={() => setCreateOpen(true)}>创建</Button>
                         )}
                     </Space>
@@ -222,7 +227,7 @@ export const ResourceServerListPage = () => {
                         </Space>
                     </Form.Item>
                 </Form>
-                {has('tianquan-shoubing:resource-server:status') && selectedRows.length > 0 && (
+                {has('tianquan-shoubing.button.ResourceServerListPage.status1') && batchWritable && selectedRows.length > 0 && (
                     <Space style={{marginBottom: 16}}>
                         <Typography.Text>已选 {selectedRows.length} 个</Typography.Text>
                         <Button
@@ -295,14 +300,14 @@ export const ResourceServerListPage = () => {
                 extra={
                     detailRs && (
                         <Space>
-                            {has('tianquan-shoubing:resource-server:status') && detailRs.status === 'DISABLED' && (
+                            {has('tianquan-shoubing.button.ResourceServerListPage.status2') && statusWritable && detailRs.status === 'DISABLED' && (
                                 <Button
                                     icon={<PlayCircleOutlined/>}
                                     loading={enableMutation.isPending}
                                     onClick={() => enableMutation.mutate({id: detailRs.resourceServerId, version: detailRs.version})}
                                 >启用</Button>
                             )}
-                            {has('tianquan-shoubing:resource-server:status') && detailRs.status === 'ACTIVE' && (
+                            {has('tianquan-shoubing.button.ResourceServerListPage.status3') && statusWritable && detailRs.status === 'ACTIVE' && (
                                 <Button
                                     icon={<StopOutlined/>}
                                     danger
@@ -338,7 +343,7 @@ export const ResourceServerListPage = () => {
                 )}
             </Drawer>
 
-            <Modal
+            <Modal okButtonProps={{disabled: !createWritable}}
                 title="创建 Resource Server"
                 open={createOpen}
                 width={600}
@@ -364,7 +369,7 @@ export const ResourceServerListPage = () => {
                 }}
                 destroyOnHidden
             >
-                <Form form={createForm} layout="vertical" preserve={false}>
+                <Form disabled={!createWritable} form={createForm} layout="vertical" preserve={false}>
                     <Typography.Title level={5}>基本信息</Typography.Title>
                     <Form.Item name="resourceServerId" label="ID" rules={[{required: true}]}>
                         <Input placeholder="my-api-server"/>

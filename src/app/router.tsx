@@ -1,3 +1,5 @@
+import {FieldCatalogProvider} from '../permissions/FieldCatalog'
+import {RequireResource} from '../permissions/RequireResource'
 import {Spin} from 'antd'
 import {lazy, Suspense} from 'react'
 import {Navigate, Outlet, Route, Routes} from 'react-router-dom'
@@ -37,24 +39,24 @@ const ConsoleGuard = ({ embedded }: { readonly embedded: boolean }) => {
 
 export const AppRouter = ({ embedded = false }: { readonly embedded?: boolean }) => (
   <AppErrorBoundary>
-    <AuthProvider>
+    <AuthProvider><FieldCatalogProvider>
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/login" element={<LoginRoute />} />
           <Route element={<ConsoleGuard embedded={embedded} />}>
             <Route index element={<Navigate to="/overview" replace />} />
-            <Route path="/overview" element={<OverviewPage />} />
-            <Route path="/users" element={<UserListPage />} />
-            <Route path="/clients" element={<ClientListPage />} />
-            <Route path="/tenants" element={<TenantListPage />} />
-              <Route path="/clients/:clientId/resource-grants" element={<ClientResourceGrantPage/>}/>
-              <Route path="/resource-servers" element={<ResourceServerListPage/>}/>
-            <Route path="/keys" element={<SigningKeyPage />} />
-            <Route path="/audits" element={<AuditLogPage />} />
+            <Route path="/overview" element={<RequireResource resourceKey="tianquan-shoubing.page.overview"><OverviewPage /></RequireResource>} />
+            <Route path="/users" element={<RequireResource resourceKey="tianquan-shoubing.page.users"><UserListPage /></RequireResource>} />
+            <Route path="/clients" element={<RequireResource resourceKey="tianquan-shoubing.page.clients"><ClientListPage /></RequireResource>} />
+            <Route path="/tenants" element={<RequireResource resourceKey="tianquan-shoubing.page.tenants"><TenantListPage /></RequireResource>} />
+              <Route path="/clients/:clientId/resource-grants" element={<RequireResource resourceKey="tianquan-shoubing.page.clients.clientId.resource.grants"><ClientResourceGrantPage /></RequireResource>}/>
+              <Route path="/resource-servers" element={<RequireResource resourceKey="tianquan-shoubing.page.resource.servers"><ResourceServerListPage /></RequireResource>}/>
+            <Route path="/keys" element={<RequireResource resourceKey="tianquan-shoubing.page.keys"><SigningKeyPage /></RequireResource>} />
+            <Route path="/audits" element={<RequireResource resourceKey="tianquan-shoubing.page.audits"><AuditLogPage /></RequireResource>} />
           </Route>
           <Route path="*" element={<Navigate to="/overview" replace />} />
         </Routes>
       </Suspense>
-    </AuthProvider>
+    </FieldCatalogProvider></AuthProvider>
   </AppErrorBoundary>
 )

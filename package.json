@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite --config vite.config.ts",
-    "build": "tsc -b && vite build --config vite.config.ts",
+    "build": "node scripts/build.mjs",
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run --config vite.config.ts",
     "lint": "eslint ."
@@ -45,5 +45,10 @@
   "homepage": "https://github.com/Stellar-Enclosure/tianquan-shoubing-web#readme",
   "bugs": {
     "url": "https://github.com/Stellar-Enclosure/tianquan-shoubing-web/issues"
+  },
+  "overrides": {
+    "react-i18next": {
+      "typescript": "$typescript"
+    }
   }
 }

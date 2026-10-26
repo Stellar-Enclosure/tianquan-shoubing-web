@@ -1,30 +1,6 @@
 // ─── Auth Bootstrap ───────────────────────────────────────────────
 import type { IdentityPage } from './page'
 
-export interface AuthorizationBootstrap {
-    readonly user: {
-        readonly id: string
-        readonly tenantId: string
-        readonly identitySub: string
-        readonly status: string
-    }
-    readonly activeRoleContexts: readonly {
-        readonly roleId: string
-        readonly roleCode: string
-        readonly applicationCode: string
-    }[]
-  readonly permissions: readonly string[]
-    readonly apps: readonly unknown[]
-    readonly menus: readonly unknown[]
-    readonly routes: readonly unknown[]
-    readonly actions: readonly unknown[]
-    readonly fieldPolicies: Readonly<Record<string, unknown>>
-    readonly defaultApplicationCode: string | null
-    readonly defaultRoute: string | null
-  readonly authVersion: number
-  readonly policyVersion: number
-}
-
 export interface IdentityProfileView {
     readonly subject: string
     readonly tenantId: string

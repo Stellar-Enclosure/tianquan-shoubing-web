@@ -1,3 +1,5 @@
+import {useWritableFields} from '../../permissions/FieldCatalog'
+import {useResourcePermission} from '../../permissions/useResourcePermission'
 import {
     Alert,
     Button,
@@ -20,7 +22,7 @@ import {useEffect, useMemo, useState} from 'react'
 import {useNavigate, useParams, useSearchParams} from 'react-router-dom'
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import {httpClient, useAuth} from '../../auth/AuthContext'
-import {PageState, usePermission} from '@stellar-enclosure/stellar-enclosure-web-shared'
+import {PageState} from '@stellar-enclosure/stellar-enclosure-web-shared'
 import {normalizePage, type IdentityPage} from '../../api/page'
 import type {
     BatchClientResourceGrantDTO,
@@ -68,16 +70,19 @@ const grantContext = (grant: ClientResourceGrantVO): string => {
 }
 
 export const ClientResourceGrantPage = () => {
+  const grantWritable = useWritableFields('UpsertClientResourceGrantDTO')
+  const deleteWritable = useWritableFields('DeleteClientResourceGrantDTO')
+  const batchWritable = useWritableFields('BatchClientResourceGrantDTO')
     const {clientId} = useParams<{ clientId: string }>()
     const auth = useAuth()
     const navigate = useNavigate()
     const [searchParams] = useSearchParams()
     const queryClient = useQueryClient()
-    const {has} = usePermission(auth.bootstrap?.permissions ?? [])
+    const {has} = useResourcePermission()
     const tenantRealm = auth.bootstrap?.user.tenantId
         ? `tenant:${auth.bootstrap.user.tenantId}`
         : undefined
-    const canSelectPlatform = auth.bootstrap?.permissions.includes('system:platform:admin') ?? false
+    const canSelectPlatform = has('tianquan-shoubing.button.ClientResourceGrantPage.admin1')
     const realm = searchParams.get('realm') === 'platform' && canSelectPlatform
         ? 'platform'
         : tenantRealm
@@ -147,7 +152,7 @@ export const ClientResourceGrantPage = () => {
             && grant.grantType === firstSelectedGrantRow.grant.grantType
             && grant.tenantId === firstSelectedGrantRow.grant.tenantId),
     )
-    const canManageGrant = has('tianquan-shoubing:resource-server:grant')
+    const canManageGrant = has('tianquan-shoubing.button.ClientResourceGrantPage.grant1')
     const grantReadUnavailable = statusOf(grantQuery.error) === 404
     const grantReadFailed = Boolean(grantQuery.error) && !grantReadUnavailable
 
@@ -318,7 +323,7 @@ export const ClientResourceGrantPage = () => {
                         >
                             <Button
                                 danger
-                                disabled={!canManageGrant || !batchSelectionCompatible}
+                                disabled={!canManageGrant || !batchWritable || !batchSelectionCompatible}
                                 loading={batchDeleteMutation.isPending}
                             >
                                 批量删除 Grant
@@ -389,12 +394,14 @@ export const ClientResourceGrantPage = () => {
                                                     title="确认删除 Grant？"
                                                     okText="确认删除"
                                                     cancelText="取消"
+                                                    disabled={!deleteWritable}
                                                     onConfirm={() => confirmDelete(row)}
                                                 >
                                                     <Button
                                                         danger
                                                         size="small"
                                                         icon={<DeleteOutlined/>}
+                                                        disabled={!deleteWritable}
                                                         loading={deleteMutation.isPending}
                                                     >
                                                         删除 Grant
@@ -410,7 +417,7 @@ export const ClientResourceGrantPage = () => {
                 </PageState>
             </Card>
 
-            <Modal
+            <Modal okButtonProps={{disabled: !grantWritable}}
                 title={`${selectedRs ? `为 ${selectedRs.displayName} 配置 Grant` : ''}`}
                 open={upsertOpen}
                 width={520}
@@ -449,7 +456,7 @@ export const ClientResourceGrantPage = () => {
                             <Descriptions.Item label="Resource Server">{selectedRs.displayName}</Descriptions.Item>
                             <Descriptions.Item label="RS 版本">{selectedRs.version}</Descriptions.Item>
                         </Descriptions>
-                        <Form form={form} layout="vertical" preserve={false}>
+                        <Form disabled={!grantWritable} form={form} layout="vertical" preserve={false}>
                             <Form.Item name="grantType" label="授权类型" rules={[{required: true}]}>
                                 <Select options={[
                                     {label: GRANT_TYPE_LABELS.USER_DELEGATION, value: 'USER_DELEGATION'},

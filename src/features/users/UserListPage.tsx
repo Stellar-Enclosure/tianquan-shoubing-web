@@ -1,10 +1,12 @@
+import {useWritableFields} from '../../permissions/FieldCatalog'
+import {useResourcePermission} from '../../permissions/useResourcePermission'
 import {Button, Card, Form, Input, message, Modal, Select, Space, Table, Tag, Typography} from 'antd'
 import {EditOutlined, LockOutlined, PlusOutlined, ReloadOutlined, StopOutlined} from '@ant-design/icons'
 import {useState} from 'react'
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query'
 import {useSearchParams} from 'react-router-dom'
-import {httpClient, useAuth} from '../../auth/AuthContext'
-import {PageState, usePermission} from '@stellar-enclosure/stellar-enclosure-web-shared'
+import {httpClient} from '../../auth/AuthContext'
+import {PageState} from '@stellar-enclosure/stellar-enclosure-web-shared'
 import {normalizePage} from '../../api/page'
 import type {
   CreateIdentityUserDTO,
@@ -57,9 +59,11 @@ const toUserSearchParams = ({page, size, query, status}: IdentityListFilter): UR
 }
 
 export const UserListPage = () => {
-  const auth = useAuth()
+  const createWritable = useWritableFields('CreateIdentityUserDTO')
+  const updateWritable = useWritableFields('UpdateIdentityUserDTO')
+
   const queryClient = useQueryClient()
-  const { has } = usePermission(auth.bootstrap?.permissions ?? [])
+  const { has } = useResourcePermission()
   const [searchParams, setSearchParams] = useSearchParams()
     const [createOpen, setCreateOpen] = useState(false)
     const [editUser, setEditUser] = useState<IdentityUserVO | null>(null)
@@ -164,7 +168,7 @@ export const UserListPage = () => {
                 <Button icon={<ReloadOutlined/>} onClick={() => {
                     void usersQuery.refetch()
                 }}>刷新</Button>
-                {has('tianquan-shoubing:identity-user:create') && (
+                {has('tianquan-shoubing.button.UserListPage.create1') && (
                     <Button type="primary" icon={<PlusOutlined/>} onClick={() => setCreateOpen(true)}>创建用户</Button>
                 )}
             </Space>
@@ -239,14 +243,14 @@ export const UserListPage = () => {
                     title: '操作', width: 260,
                     render: (_: unknown, row: IdentityUserVO) => (
                         <Space size="small">
-                            {has('tianquan-shoubing:identity-user:update') && (
+                            {has('tianquan-shoubing.button.UserListPage.update1') && (
                                 <Button size="small" icon={<EditOutlined/>} onClick={() => openEdit(row)}>编辑</Button>
                             )}
-                            {has('tianquan-shoubing:identity-user:password-reset') && (
+                            {has('tianquan-shoubing.button.UserListPage.password-reset1') && (
                                 <Button size="small" icon={<LockOutlined/>}
                                         onClick={() => resetPasswordMutation.mutate(row.subject)}>重置密码</Button>
                             )}
-                            {has('tianquan-shoubing:identity-user:revoke-all') && (
+                            {has('tianquan-shoubing.button.UserListPage.revoke-all1') && (
                                 <Button size="small" danger icon={<StopOutlined/>}
                                         onClick={() => revokeMutation.mutate(row.subject)}>撤销会话</Button>
                             )}
@@ -259,7 +263,7 @@ export const UserListPage = () => {
       </Card>
 
         {/* Create Modal */}
-      <Modal
+      <Modal okButtonProps={{disabled: !createWritable}}
         title="创建全局身份用户"
         open={createOpen}
         confirmLoading={createMutation.isPending}
@@ -272,7 +276,7 @@ export const UserListPage = () => {
         }}
         destroyOnHidden
       >
-          <Form form={createForm} layout="vertical" preserve={false}>
+          <Form disabled={!createWritable} form={createForm} layout="vertical" preserve={false}>
               <Form.Item name="username" label="用户名" rules={[{required: true, message: '请输入用户名'}]}>
                   <Input autoComplete="off"/>
               </Form.Item>
@@ -283,7 +287,7 @@ export const UserListPage = () => {
       </Modal>
 
         {/* Edit Modal */}
-        <Modal
+        <Modal okButtonProps={{disabled: !updateWritable}}
             title={`编辑用户：${editUser?.username ?? ''}`}
             open={!!editUser}
             confirmLoading={editMutation.isPending}
@@ -303,7 +307,7 @@ export const UserListPage = () => {
             }}
             destroyOnHidden
         >
-            <Form form={editForm} layout="vertical" preserve={false}>
+            <Form disabled={!updateWritable} form={editForm} layout="vertical" preserve={false}>
                 <Form.Item name="displayName" label="显示名" rules={[{required: true, message: '请输入显示名'}]}>
                     <Input/>
                 </Form.Item>

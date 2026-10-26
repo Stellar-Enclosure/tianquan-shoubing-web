@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "application": {
+    "businessCode": "xingyuan",
+    "applicationCode": "tianquan-shoubing"
+  },
+  "producerId": "tianquan-shoubing-web",
+  "ownedKeyPrefixes": [
+    "tianquan-shoubing.app.",
+    "tianquan-shoubing.menu.",
+    "tianquan-shoubing.page.",
+    "tianquan-shoubing.button.",
+    "tianquan-shoubing.component."
+  ],
+  "expectedModules": [
+    "console"
+  ],
+  "modules": {
+    "console": {
+      "entryPoints": [
+        "src/permissions/permissions.ts",
+        "src/permissions/resources.ts",
+        "src/permissions/fieldReferences.ts"
+      ]
+    }
+  },
+  "artifact": {
+    "repository": "tianquan-shoubing-web",
+    "commit": "ebb7244a30d5e739358fa433d8ce5502aff9f0cc",
+    "buildId": "local-source",
+    "version": "0.0.1"
+  },
+  "tsconfig": "tsconfig.app.json",
+  "toolchainLock": "permission-toolchain.lock.json"
+}

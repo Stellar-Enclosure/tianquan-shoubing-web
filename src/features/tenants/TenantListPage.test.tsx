@@ -1,3 +1,5 @@
+vi.mock('../../permissions/FieldCatalog', () => ({useWritableFields: () => true}))
+import {authorizationFixture} from '../../test/permissionFixtures'
 import {cleanup, fireEvent, render, screen, waitFor, within} from '@testing-library/react'
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -13,13 +15,7 @@ const state = vi.hoisted(() => ({
 vi.mock('../../auth/AuthContext', () => ({
     useAuth: () => ({
         loading: false,
-        bootstrap: {
-            user: {id: 'admin-1', identitySub: 'admin-sub', tenantId: 'default', status: 'ACTIVE'},
-            activeRoleContexts: [],
-            permissions: state.permissions,
-            apps: [], menus: [], routes: [], actions: [], fieldPolicies: {},
-            defaultApplicationCode: null, defaultRoute: null, authVersion: 1, policyVersion: 1,
-        },
+        bootstrap: authorizationFixture(state.permissions, {tenantId: '1', subject: 'admin-sub'}),
     }),
     httpClient: {request: state.request},
 }))

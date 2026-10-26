@@ -1,3 +1,4 @@
+import {authorizationFixture} from '../../test/permissionFixtures'
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query'
 import {cleanup, render, screen, waitFor} from '@testing-library/react'
 import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
@@ -11,13 +12,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock('../../auth/AuthContext', () => ({
   httpClient: {request: mocks.request},
   useAuth: () => ({
-    bootstrap: {
-      user: {id: 'rbac-user-1', tenantId: 'tenant-a', identitySub: 'admin-sub', status: 'ACTIVE'},
-      activeRoleContexts: mocks.activeRoleContexts,
-      permissions: [],
-      apps: [], menus: [], routes: [], actions: [], fieldPolicies: {},
-      defaultApplicationCode: 'tianquan-shoubing-admin', defaultRoute: null, authVersion: 2, policyVersion: 3,
-    },
+    bootstrap: authorizationFixture([], {tenantId: '1', subject: 'admin-sub', roles: mocks.activeRoleContexts.map(value => value.roleId)}),
   }),
 }))
 
@@ -31,14 +26,14 @@ describe('Tianquan-Shoubing overview', () => {
   beforeEach(() => { mocks.activeRoleContexts = [] })
 
   it('renders the flat role descriptors returned by the bootstrap contract', async () => {
-    mocks.activeRoleContexts = [{roleId: 'role-1', roleCode: 'TIANQUAN_SHOUBING_ADMIN', applicationCode: 'tianquan-shoubing-admin'}]
+    mocks.activeRoleContexts = [{roleId: '1001', roleCode: 'TIANQUAN_SHOUBING_ADMIN', applicationCode: 'tianquan-shoubing-admin'}]
     mocks.request.mockResolvedValue({subject: 'admin-sub', tenantId: 'tenant-a'})
     render(
       <QueryClientProvider client={new QueryClient({defaultOptions: {queries: {retry: false}}})}>
         <OverviewPage />
       </QueryClientProvider>,
     )
-    expect(await screen.findByText('role-1')).toBeInTheDocument()
+    expect(await screen.findByText('1001')).toBeInTheDocument()
     expect(screen.queryByText('当前上下文未返回角色明细')).not.toBeInTheDocument()
   })
 
@@ -65,7 +60,7 @@ describe('Tianquan-Shoubing overview', () => {
     expect(screen.queryByText('private-token-audience')).not.toBeInTheDocument()
     expect(screen.queryByText('Tianquan-Jianshen 用户 ID')).not.toBeInTheDocument()
     expect(screen.queryByText('rbac-user-1')).not.toBeInTheDocument()
-    expect(screen.getByText('tianquan-shoubing-admin')).toBeInTheDocument()
+    expect(screen.getByText('tianquan-shoubing')).toBeInTheDocument()
     expect(screen.getByText('当前上下文未返回角色明细')).toBeInTheDocument()
   })
 })

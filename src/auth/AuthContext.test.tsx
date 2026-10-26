@@ -1,72 +1,47 @@
-import {cleanup, render, screen, waitFor} from '@testing-library/react'
-import {afterEach, describe, expect, it, vi} from 'vitest'
+import {act, cleanup, fireEvent, render, screen, waitFor} from '@testing-library/react'
+import {afterEach, beforeEach, describe, expect, it, vi} from 'vitest'
 import {AuthProvider, useAuth} from './AuthContext'
-
-const state = vi.hoisted(() => ({
-    bootstrap: vi.fn(),
-    login: vi.fn(),
-    logout: vi.fn(),
-}))
-
-vi.mock('@stellar-enclosure/stellar-enclosure-web-shared', async () => {
-    const actual = await vi.importActual<typeof import('@stellar-enclosure/stellar-enclosure-web-shared')>('@stellar-enclosure/stellar-enclosure-web-shared')
-  return {
-      ...actual,
-      createGatewayAuthClient: () => ({
-          bootstrap: state.bootstrap,
-          login: state.login,
-          logout: state.logout,
-      }),
-      createHttpClient: () => ({request: vi.fn()}),
-  }
-})
-
+import {gatewayAuth, httpClient} from './authTransport'
+import {authorizationFixture, identityFixture} from '../test/permissionFixtures'
 const Probe = () => {
-    const auth = useAuth()
-    return <div>{auth.loading ? 'loading' : auth.bootstrap?.user.identitySub ?? 'logged-out'}</div>
+  const auth = useAuth()
+  return <><p>{auth.loading ? 'loading' : auth.bootstrap?.user.identitySub ?? 'logged-out'}</p>
+    <button onClick={() => void auth.logout()}>logout</button></>
 }
-
-afterEach(() => {
-    cleanup()
-    vi.clearAllMocks()
+beforeEach(() => {
+  vi.stubEnv('VITE_PERMISSION_NAMESPACE', 'default')
+  vi.stubEnv('VITE_PERMISSION_ENVIRONMENT', 'test')
+  vi.spyOn(gatewayAuth, 'identity').mockResolvedValue(identityFixture())
+  vi.spyOn(httpClient, 'request').mockResolvedValue({success: true, data: authorizationFixture().snapshot})
+  vi.spyOn(gatewayAuth, 'logout').mockResolvedValue({operationId: '11111111-1111-1111-1111-111111111111', status: 'LOCAL_CLOSED', remoteState: 'PENDING', ssoLogoutUri: identityFixture().ssoLogoutUri})
 })
-
-describe('Tianquan-Shoubing authentication hydration', () => {
-    it('hydrates authorization from the Yuheng cookie bootstrap without browser token state', async () => {
-        state.bootstrap.mockResolvedValue({
-            user: {id: 'user-1', tenantId: 'default', identitySub: 'alice-sub', status: 'ACTIVE'},
-            activeRoleContexts: [], permissions: [], apps: [], menus: [], routes: [], actions: [], fieldPolicies: {},
-            defaultApplicationCode: null, defaultRoute: null, authVersion: 1, policyVersion: 1,
-        })
-        render(<AuthProvider><Probe/></AuthProvider>)
-        await waitFor(() => expect(screen.getByText('alice-sub')).toBeInTheDocument())
-        expect(state.bootstrap).toHaveBeenCalledTimes(1)
+afterEach(() => {cleanup(); vi.restoreAllMocks(); vi.unstubAllEnvs()})
+describe('identity-bound permission hydration', () => {
+  it('loads the verified identity before accepting the canonical application snapshot', async () => {
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await screen.findByText('admin-sub')
+    expect(httpClient.request).toHaveBeenCalledWith('/api/v1/authorization/effective-permissions', expect.objectContaining({signal: expect.any(AbortSignal)}))
   })
-})
-
-
-describe('fixed deployment registration', () => {
-  it('passes the configured alias to the installed client without tenant or issuer selectors', async () => {
-    const navigate = vi.fn()
-    vi.stubEnv('VITE_OAUTH_REGISTRATION_ID', 'edge-deployment-child')
-    vi.stubEnv('VITE_YUHENG_ORIGIN', '')
-    vi.resetModules()
-    vi.doUnmock('./AuthContext')
-    vi.doMock('@stellar-enclosure/stellar-enclosure-web-shared', async () => {
-      const actual = await vi.importActual<typeof import('@stellar-enclosure/stellar-enclosure-web-shared')>('@stellar-enclosure/stellar-enclosure-web-shared')
-      return {...actual, createGatewayAuthClient: (options: Parameters<typeof actual.createGatewayAuthClient>[0]) =>
-        actual.createGatewayAuthClient({...options, navigate})}
-    })
-    try {
-      const {gatewayAuth: configured} = await import('./AuthContext')
-      configured.login()
-      configured.stepUp()
-      expect(navigate.mock.calls[0]?.[0]).toBe('/oauth2/authorization/edge-deployment-child')
-      expect(String(navigate.mock.calls[1]?.[0]).split('?')[0]).toBe('/oauth2/authorization/edge-deployment-child')
-      expect(String(navigate.mock.calls[1]?.[0])).not.toMatch(/tenant|issuer|resource/)
-    } finally {
-      vi.doUnmock('@stellar-enclosure/stellar-enclosure-web-shared')
-      vi.unstubAllEnvs()
-    }
+  it.each(['tenant', 'application', 'environment'])('rejects another %s context', async field => {
+    const snapshot = authorizationFixture().snapshot
+    vi.mocked(httpClient.request).mockResolvedValue({success: true, data: {...snapshot, catalogScope: {...snapshot.catalogScope,
+      ...(field === 'tenant' ? {tenantId: '2'} : field === 'application' ? {applicationCode: 'tianquan-jianshen'} : {environment: 'dev'})}}})
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await screen.findByText('logged-out')
+  })
+  it('clears local state immediately and rejects a late result after logout', async () => {
+    let finish: (value: unknown) => void = () => {}
+    vi.mocked(httpClient.request).mockImplementation(() => new Promise(resolve => {finish = resolve}))
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await waitFor(() => expect(httpClient.request).toHaveBeenCalledOnce())
+    fireEvent.click(screen.getByText('logout'))
+    await act(async () => finish({success: true, data: authorizationFixture().snapshot}))
+    expect(screen.getByText('logged-out')).toBeTruthy()
+  })
+  it('does not reuse permissions after the shared context is invalidated', async () => {
+    render(<AuthProvider><Probe /></AuthProvider>)
+    await screen.findByText('admin-sub')
+    act(() => gatewayAuth.context.invalidate())
+    expect(screen.getByText('logged-out')).toBeTruthy()
   })
 })
