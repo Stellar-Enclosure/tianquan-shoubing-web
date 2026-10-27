@@ -323,3 +323,15 @@ export interface AuditFilter {
     readonly to?: string
     readonly traceId?: string
 }
+
+export interface DeviceSessionVO {
+    readonly sessionId: string
+    readonly clientId: string
+    readonly clientName: string
+    readonly channel: 'BROWSER' | 'APP'
+    readonly platform: string
+    readonly userAgent?: string
+    readonly ipAddress?: string
+    readonly authenticatedAt: string
+    readonly expiresAt: string
+}

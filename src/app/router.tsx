@@ -15,6 +15,7 @@ const TenantListPage = lazy(() => import('../features/tenants/TenantListPage').t
 const ResourceServerListPage = lazy(() => import('../features/resource-servers/ResourceServerListPage').then(m => ({default: m.ResourceServerListPage})))
 const ClientResourceGrantPage = lazy(() => import('../features/resource-grants/ClientResourceGrantPage').then(m => ({default: m.ClientResourceGrantPage})))
 const SigningKeyPage = lazy(() => import('../features/keys/SigningKeyPage').then(m => ({ default: m.SigningKeyPage })))
+const DeviceSessionPage = lazy(() => import('../features/sessions/DeviceSessionPage').then(m => ({ default: m.DeviceSessionPage })))
 const AuditLogPage = lazy(() => import('../features/audits/AuditLogPage').then(m => ({ default: m.AuditLogPage })))
 
 const PageFallback = () => <Spin style={{ display: 'grid', placeItems: 'center', minHeight: 200 }} />
@@ -52,6 +53,7 @@ export const AppRouter = ({ embedded = false }: { readonly embedded?: boolean })
               <Route path="/clients/:clientId/resource-grants" element={<RequireResource resourceKey="tianquan-shoubing.page.clients.clientId.resource.grants"><ClientResourceGrantPage /></RequireResource>}/>
               <Route path="/resource-servers" element={<RequireResource resourceKey="tianquan-shoubing.page.resource.servers"><ResourceServerListPage /></RequireResource>}/>
             <Route path="/keys" element={<RequireResource resourceKey="tianquan-shoubing.page.keys"><SigningKeyPage /></RequireResource>} />
+            <Route path="/sessions" element={<RequireResource resourceKey="tianquan-shoubing.page.sessions"><DeviceSessionPage /></RequireResource>} />
             <Route path="/audits" element={<RequireResource resourceKey="tianquan-shoubing.page.audits"><AuditLogPage /></RequireResource>} />
           </Route>
           <Route path="*" element={<Navigate to="/overview" replace />} />

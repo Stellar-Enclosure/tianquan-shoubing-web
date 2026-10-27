@@ -2,6 +2,8 @@ import {definePermissionReferences} from '@stellar-enclosure/stellar-enclosure-w
 
 export const permissions = definePermissionReferences([
   "system:platform:admin",
+  "tianquan-shoubing:identity:self:read",
+  "tianquan-shoubing:identity:self:session-revoke",
   "tianquan-shoubing:audit:read",
   "tianquan-shoubing:identity-user:create",
   "tianquan-shoubing:identity-user:password-reset",

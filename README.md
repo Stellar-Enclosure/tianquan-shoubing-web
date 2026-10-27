@@ -91,3 +91,9 @@ The normal GitHub/GitLab pipelines perform offline checks and package artifact e
 Local unit/build evidence does not prove PostgreSQL migrations, browser/SSO behavior, deployed artifact readiness, real CI runs, or remote registration/activation. Those require the separately prepared environment. None of these commands starts an application, database, container or browser.
 
 GitLab activation additionally requires protected `PERMISSION_DEPLOYMENT_JOB_NAME` (the exact name of a separate successful deployment job) and `PERMISSION_GITLAB_READ_TOKEN_FILE` (an absolute owner-only file containing a `read_api` token). Deployment evidence includes `gitlab: {projectId, pipelineId, jobId}` using decimal strings from the current project. The adapter reads that job and successful pipeline from the configured GitLab API, checks the current protected ref/commit and fresh readiness, and compares the original `permission-deployment.json` job artifact with the local proof. The API must share the `CI_SERVER_URL` HTTPS origin; artifact CDN redirects never receive the API token. These external variables and deployment jobs still require environment configuration and verification.
+
+## Login devices
+
+The **登录设备** page at `/sessions` lists browser/App sessions for the current tenant account, including the client, platform, source address and login time. Accounts keep at most five active sessions; another login evicts the oldest. A confirmed kick closes only the chosen session. All devices use the same account active-role selection.
+
+The page requires `tianquan-shoubing:identity:self:read`; its kick action requires `tianquan-shoubing:identity:self:session-revoke`. Publish the updated backend/frontend permission manifests and configure the existing role/client scope grants before runtime use. The local permission build verifies artifacts only and does not register or activate them.

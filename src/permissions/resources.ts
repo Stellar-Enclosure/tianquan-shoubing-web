@@ -891,6 +891,58 @@ export const resources = defineResources([
       "pageCode": "tianquan-shoubing.web.permissions",
       "labelKey": "tianquan-shoubing.page.audits"
     }
+  },
+  {
+    "key": "tianquan-shoubing.menu.sessions",
+    "type": "MENU",
+    "target": {
+      "route": "/sessions"
+    },
+    "requirement": {
+      "mode": "ALL",
+      "codes": [
+        "tianquan-shoubing:identity:self:read"
+      ]
+    },
+    "i18n": {
+      "pageCode": "tianquan-shoubing.web.permissions",
+      "labelKey": "tianquan-shoubing.menu.sessions"
+    }
+  },
+  {
+    "key": "tianquan-shoubing.page.sessions",
+    "type": "PAGE",
+    "target": {
+      "route": "/sessions"
+    },
+    "requirement": {
+      "mode": "ALL",
+      "codes": [
+        "tianquan-shoubing:identity:self:read"
+      ]
+    },
+    "i18n": {
+      "pageCode": "tianquan-shoubing.web.permissions",
+      "labelKey": "tianquan-shoubing.page.sessions"
+    }
+  },
+  {
+    "key": "tianquan-shoubing.button.sessions.revoke",
+    "type": "BUTTON",
+    "target": {
+      "component": "src/features/sessions/DeviceSessionPage.tsx",
+      "action": "revoke"
+    },
+    "requirement": {
+      "mode": "ALL",
+      "codes": [
+        "tianquan-shoubing:identity:self:session-revoke"
+      ]
+    },
+    "i18n": {
+      "pageCode": "tianquan-shoubing.web.permissions",
+      "labelKey": "tianquan-shoubing.button.sessions.revoke"
+    }
   }
 ] as const)
 
@@ -1309,6 +1361,33 @@ export const messages = defineMessages([
     "defaultLocale": "en-US",
     "defaults": {
       "en-US": "audits"
+    }
+  },
+  {
+    "pageCode": "tianquan-shoubing.web.permissions",
+    "key": "tianquan-shoubing.menu.sessions",
+    "defaultLocale": "en-US",
+    "defaults": {
+      "en-US": "登录设备",
+      "zh-CN": "登录设备"
+    }
+  },
+  {
+    "pageCode": "tianquan-shoubing.web.permissions",
+    "key": "tianquan-shoubing.page.sessions",
+    "defaultLocale": "en-US",
+    "defaults": {
+      "en-US": "登录设备",
+      "zh-CN": "登录设备"
+    }
+  },
+  {
+    "pageCode": "tianquan-shoubing.web.permissions",
+    "key": "tianquan-shoubing.button.sessions.revoke",
+    "defaultLocale": "en-US",
+    "defaults": {
+      "en-US": "踢出会话",
+      "zh-CN": "踢出会话"
     }
   }
 ] as const)

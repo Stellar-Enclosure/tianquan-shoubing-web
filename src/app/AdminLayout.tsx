@@ -33,6 +33,7 @@ const ALL_NAV_ITEMS: NavItem[] = [
         {key: 'resource-servers', label: 'Resource Server', path: '/resource-servers', permission: 'tianquan-shoubing.menu.resource-servers'},
     ]},
     {key: 'security', label: '安全治理', permission: 'tianquan-shoubing.menu.security', children: [
+        {key: 'sessions', label: '登录设备', path: '/sessions', permission: 'tianquan-shoubing.menu.sessions'},
         {key: 'keys', label: '签名密钥', path: '/keys', permission: 'tianquan-shoubing.menu.keys'},
         {key: 'audits', label: '安全审计', path: '/audits', permission: 'tianquan-shoubing.menu.audits'},
     ]},
@@ -44,6 +45,7 @@ const PATH_LABELS: Record<string, string> = {
     '/clients': 'OAuth 客户端',
     '/tenants': '租户目录',
     '/resource-servers': 'Resource Server',
+    '/sessions': '登录设备',
     '/keys': '签名密钥',
     '/audits': '安全审计',
 }
