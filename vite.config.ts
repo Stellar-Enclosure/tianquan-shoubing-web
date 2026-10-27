@@ -58,6 +58,7 @@ export default defineConfig(async ({mode, command}) => {
     build: { sourcemap: false, chunkSizeWarningLimit: 900 },
     test: {
       environment: 'jsdom',
+      fileParallelism: false,
       setupFiles: './src/test/setup.ts',
       exclude: ['node_modules/**', 'dist/**'],
         env: {
