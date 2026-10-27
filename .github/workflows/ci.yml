@@ -27,9 +27,6 @@ jobs:
         with:
           path: workspace/tianquan-shoubing-web
           persist-credentials: false
-      - name: Verify permission delivery boundaries offline
-        working-directory: workspace/tianquan-shoubing-web
-        run: python3 scripts/permission-ci.test.py
       - name: Read the reviewed immutable toolchain commit
         id: pin
         working-directory: workspace/tianquan-shoubing-web
@@ -43,6 +40,9 @@ jobs:
           path: workspace/web-sdk
           token: ${{ secrets.STELLAR_ENCLOSURE_READ_TOKEN || github.token }}
           persist-credentials: false
+      - name: Verify permission delivery boundaries offline
+        working-directory: workspace/tianquan-shoubing-web
+        run: python3 scripts/permission-ci.test.py
       - uses: actions/setup-node@v5
         with:
           node-version: '24'

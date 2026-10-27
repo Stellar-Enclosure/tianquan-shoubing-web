@@ -26,7 +26,6 @@ variables:
   before_script:
     - apt-get update -qq
     - apt-get install -y --no-install-recommends ca-certificates curl git python3 unzip
-    - python3 scripts/permission-ci.test.py
     - |
       set -eu
       sdk_commit=$(python3 scripts/permission-ci.py pin)
@@ -37,6 +36,7 @@ variables:
       git -C "$PERMISSION_SDK_ROOT" -c 'credential.helper=!f() { printf "username=gitlab-ci-token\npassword=%s\n" "$CI_JOB_TOKEN"; }; f' \
         fetch --quiet --depth 1 origin "$sdk_commit"
       git -C "$PERMISSION_SDK_ROOT" checkout --quiet --detach FETCH_HEAD
+      python3 scripts/permission-ci.test.py
       (cd "$PERMISSION_SDK_ROOT" && npm ci)
       python3 - <<'CHECK'
       import os, urllib.parse
